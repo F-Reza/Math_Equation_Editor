@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Equation Editor</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --dark: #333;
+            --light: #f5f7fa;
+            --gray: #e1e8f0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            line-height: 1.4;
+            padding: 15px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1010px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: none; /* Hidden by default */
+            position: relative;
+            z-index: 1000;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        /* New modal styles */
+        .instructions-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 480px;
+            height: 320px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+            z-index: 2000; /* Increased z-index */
+            display: none;
+            overflow: hidden;
+        }
+
+        .instructions-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1999;
+        }
+
+        .instructions-modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .instructions-modal-header h2 {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .instructions-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .instructions-modal-content {
+            padding: 20px;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+
+        .instructions-modal-content h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1rem;
+        }
+
+        .instructions-modal-content ul {
+            padding-left: 18px;
+        }
+
+        .instructions-modal-content li {
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .editor-container {
+            padding: 10px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: 790px; /* Added max-height */
+            overflow-y: auto; /* Added scroll */
+        }
+
+        .section-title {
+            font-size: 1rem;
+            /* margin-bottom: 10px; */
+            color: var(--dark);
+            /* border-bottom: 2px solid var(--primary); */
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 8px;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        #equation-input {
+            width: 100%;
+            height: 80px;
+            padding: 12px;
+            border: 2px solid var(--gray);
+            border-radius: 6px;
+            font-size: 1rem;
+            resize: vertical;
+            /* margin-bottom: 15px; */
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+        }
+
+        #equation-input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.1);
+        }
+
+        .action-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            padding: 5px 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .action-button.secondary {
+            background: linear-gradient(135deg, var(--success) 0%, #8bc34a 100%);
+        }
+
+        .action-button.tertiary {
+            background: linear-gradient(135deg, var(--warning) 0%, #ffc107 100%);
+        }
+
+        .result-container {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 6px;
+            padding: 5px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+
+        #result-value {
+            font-size: 0.8rem;
+            color: var(--dark);
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .symbols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 8px;
+        }
+
+        .section-titleX {
+            font-size: 1rem;
+            color: var(--dark);
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-titleZ {
+            margin-bottom: 6px;
+        }
+
+        .section-title i {
+            margin-right: 8px;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .section-title .toggle-icon {
+            font-size: 0.9rem;
+            color: var(--primary);
+            transition: transform 0.3s ease;
+            margin-right: 0;
+        }
+
+        .section-title.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .symbols-container {
+            background-color: var(--light);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .symbols-container {
+            background-color: var(--light);
+            border-radius: 6px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .symbols-grid.collapsed {
+            padding: 0 15px;
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .symbols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 8px;
+            transition: all 0.3s ease;overflow: hidden;
+        }
+        
+        .math-button {
+            padding: 8px 6px;
+            background-color: white;
+            border: 1px solid var(--gray);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .math-button:hover {
+            background-color: #e1e8f0;
+            transform: translateY(-1px);
+        }
+
+        .operator {
+            background-color: #e3f2fd;
+        }
+
+        .function {
+            background-color: #e8f5e9;
+        }
+
+        .symbol {
+            background-color: #fff3e0;
+        }
+
+        .greek {
+            background-color: #f3e5f5;
+        }
+
+        .advanced {
+            background-color: #e0f2f1;
+        }
+
+        .formula-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .category-tab {
+            padding: 5px 15px;
+            background-color: var(--light);
+            border: 1px solid var(--gray);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .category-tab.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .formula-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+            /* max-height: 400px; */
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .formula-item {
+            padding: 12px;
+            background-color: var(--light);
+            border: 1px solid var(--gray);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .formula-item:hover {
+            background-color: #e1e8f0;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .formula-name {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--dark);
+            font-size: 0.9rem;
+        }
+
+        .formula-equation {
+            font-size: 1rem;
+            color: var(--primary);
+            text-align: center;
+            margin: 8px 0;
+        }
+
+        .formula-description {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        /* Equation Preview */
+        #preview {
+            min-height: 110px;
+            padding: 20px;
+            border: 2px solid var(--gray);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background-color: #f9f9f9;
+            overflow: auto;
+            text-align: center;
+            position: relative;
+        }
+
+        .copy-preview-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .copy-preview-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .instructions {
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 4px solid var(--primary);
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .instructions ul {
+            padding-left: 18px;
+        }
+
+        .instructions li {
+            margin-bottom: 6px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            padding: 12px 20px;
+            background-color: var(--success);
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+            font-size: 0.9rem;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.85rem;
+            border-top: 1px solid var(--gray);
+            background-color: #f9f9f9;
+        }
+
+        code {
+            background-color: #e1e8f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        /* Hidden canvas for image capture */
+        #canvas-container {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+        }
+        .instructions-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .instructions {
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 4px solid var(--primary);
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1rem;
+        }
+
+        .instructions ul {
+            padding-left: 18px;
+        }
+
+        .instructions li {
+            margin-bottom: 6px;
+        }
+
+        /* For mobile responsiveness */
+        @media (max-width: 768px) {
+            .instructions-container {
+                grid-template-columns: 1fr;
+            }
+            .instructions-modal {
+                width: 90%;
+                height: 70%;
+            }
+        }
+
+        .open-modal-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 20px;
+        }
+
+        .open-modal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+    </style>
+</head>
+<body>
+    <button class="open-modal-btn">
+        <i class="fas fa-square-root-alt"></i> Equation Editor
+    </button>
+    
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="container" id="equation-editor">
+            <header>
+                <button id="close-modal" class="close-modal" style="position:absolute; top:10px; right:15px; font-size:20px; background:none; border:none; cursor:pointer;">×</button>
+                
+                <button id="open-modal-instructionsX" class="open-modal-instructionsX" 
+                style="position:absolute; top:15px; left:25px; 
+                font-size:20px; background:none; color:rgb(223, 150, 14); 
+                border:none; cursor:pointer;">
+                <i class="fas fa-lightbulb"></i></button>
+                
+                <button id="open-modal-instructionsZ" class="open-modal-instructionsZ" 
+                style="position:absolute; top:15px; left:60px; 
+                font-size:20px; background:none; color:rgb(255, 255, 255); 
+                border:none; cursor:pointer;">
+                <i class="fas fa-info-circle"></i></button>
+
+                <h1><i class="fas fa-square-root-alt"> </i> Math Equation Editor</h1>
+            </header>
+
+            <div class="editor-container">
+                <!-- Equation Preview -->
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-eye"></i> Equation Preview
+                    </h2>
+                    <div id="preview">
+                        <p>Your equation will appear here</p>
+                        <button class="copy-preview-btn" id="copy-preview-btn">
+                            🗐 Copy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Equation Editor -->
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-edit"></i> Equation Editor
+                    </h2>
+                    <textarea id="equation-input" placeholder="Enter your equation here or select from formulas below..."></textarea>
+                </div>
+
+                <!-- Action Buttons & Result -->
+                <div class="action-container">
+                    <div class="action-buttons">
+                        <button id="clear-btn" class="action-button">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                        <button id="copy-btn" class="action-button secondary">
+                            <i class="fas fa-copy"></i> Copy LaTeX
+                        </button>
+                        <button id="evaluate-btn" class="action-button tertiary">
+                            <i class="fas fa-calculator"></i> Evaluate
+                        </button>
+                        <div class="result-container">
+                        <div id="result-value">No evaluation yet</div>
+                    </div>
+                    </div>
+                    
+                </div>
+
+                <!-- Math Symbols -->
+                <div class="symbols-container" id="symbols-container">
+                    <h3 class="section-title section-titleX" id="symbols-title">
+                        <span>
+                            <i class="fas fa-square-root-alt"></i> Math Symbols 
+                        </span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </h3>
+                    <div class="symbols-grid" id="symbols-grid">
+                        <!-- Symbols will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Formula Library -->
+                <div>
+                    <h2 class="section-title section-titleZ">
+                        <i class="fas fa-book"></i> Formula Library
+                    </h2>
+                    <div class="formula-categories">
+                        <div class="category-tab active" data-category="algebra">Algebra</div>
+                        <div class="category-tab" data-category="geometry">Geometry</div>
+                        <div class="category-tab" data-category="calculus">Calculus</div>
+                        <div class="category-tab" data-category="differential">Differential</div>
+                        <div class="category-tab" data-category="integral">Integral</div>
+                        <div class="category-tab" data-category="statistics">Statistics</div>
+                        <div class="category-tab" data-category="mechanics">Mechanics</div>
+                        <div class="category-tab" data-category="electromagnetism">Electromagnetism</div>
+                        <div class="category-tab" data-category="thermodynamics">Thermodynamics</div>
+                        <div class="category-tab" data-category="quantum">Quantum</div>
+                        <div class="category-tab" data-category="matrices">Matrices</div>
+                        <div class="category-tab" data-category="chemistry">Chemistry</div>
+                        <div class="category-tab" data-category="biology">Biology</div>
+                        <div class="category-tab" data-category="economics">Economics</div>
+                        <div class="category-tab" data-category="finance">Finance</div>
+                        <div class="category-tab" data-category="logic">Logic</div>
+                    </div>
+                    
+                    <div class="formula-grid" id="formula-container">
+                        <!-- Formulas will be loaded here -->
+                    </div>
+                </div>
+
+            </div>
+            
+            <footer>
+                <p>Math Equation Editor &copy; 2025 | Powered by NextDigit</p>
+            </footer>
+        </div>
+    </div>
+
+
+<!-- Instructions Modals Overlay -->
+<div id="instructions-modal-overlay" class="instructions-modal-overlay"></div>
+
+<!-- Instructions Modals -->
+<div id="modal-instructionsX" class="instructions-modal">
+    <div class="instructions-modal-header">
+        <h2><i class="fas fa-lightbulb"></i> How to Use</h2>
+        <button class="instructions-modal-close">&times;</button>
+    </div>
+    <div class="instructions-modal-content">
+        <ul>
+            <li>Select a category to browse formulas</li>
+            <li>Click on any formula to insert it into the editor</li>
+            <li>Click on math symbols to add them to your equation</li>
+            <li>You can also type directly in the text area</li>
+            <li>Use LaTeX syntax for advanced formatting</li>
+            <li>Click "Copy LaTeX" to copy the equation code</li>
+            <li>Click "Evaluate" to calculate simple expressions</li>
+            <li>Click "🗐 Copy" to copy the rendered equation as text</li>
+        </ul>
+    </div>
+</div>
+
+<div id="modal-instructionsZ" class="instructions-modal">
+    <div class="instructions-modal-header">
+        <h2><i class="fas fa-info-circle"></i> LaTeX Tips</h2>
+        <button class="instructions-modal-close">&times;</button>
+    </div>
+    <div class="instructions-modal-content">
+        <ul>
+            <li>Fractions: <code>\frac{numerator}{denominator}</code></li>
+            <li>Exponents: <code>x^{2}</code></li>
+            <li>Subscripts: <code>x_{1}</code></li>
+            <li>Square root: <code>\sqrt{expression}</code></li>
+            <li>n-th root: <code>\sqrt[n]{expression}</code></li>
+            <li>Integrals: <code>\int_{a}^{b} f(x) dx</code></li>
+            <li>Summation: <code>\sum_{i=1}^{n} x_i</code></li>
+            <li>Matrices: <code>\begin{matrix} a & b \\ c & d \end{matrix}</code></li>
+        </ul>
+    </div>
+</div>
+
+    <!-- Hidden canvas for image capture -->
+    <div id="canvas-container"></div>
+
+    <div id="notification" class="notification">
+        Copied to clipboard!
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const equationInput = document.getElementById('equation-input');
+        const preview = document.getElementById('preview');
+        const clearBtn = document.getElementById('clear-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const copyPreviewBtn = document.getElementById('copy-preview-btn');
+        const evaluateBtn = document.getElementById('evaluate-btn');
+        const resultValue = document.getElementById('result-value');
+        const formulaContainer = document.getElementById('formula-container');
+        const symbolsGrid = document.getElementById('symbols-grid');
+        const categoryTabs = document.querySelectorAll('.category-tab');
+        const notification = document.getElementById('notification');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const equationEditor = document.getElementById('equation-editor');
+        const openModalBtn = document.querySelector('.open-modal-btn');
+        
+// Instruction modals
+const modalInstructionsX = document.getElementById('modal-instructionsX');
+const modalInstructionsZ = document.getElementById('modal-instructionsZ');
+const modalInstructionsXBtn = document.getElementById('open-modal-instructionsX'); // Changed ID
+const modalInstructionsZBtn = document.getElementById('open-modal-instructionsZ'); // Changed ID
+const modalCloseBtns = document.querySelectorAll('.instructions-modal-close');
+const instructionsModalOverlay = document.getElementById('instructions-modal-overlay');
+
+// Instruction modals functionality
+modalInstructionsXBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    modalInstructionsX.style.display = 'block';
+    instructionsModalOverlay.style.display = 'block';
+});
+
+modalInstructionsZBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    modalInstructionsZ.style.display = 'block';
+    instructionsModalOverlay.style.display = 'block';
+});
+
+// Close instruction modals
+modalCloseBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+        modalInstructionsX.style.display = 'none';
+        modalInstructionsZ.style.display = 'none';
+        instructionsModalOverlay.style.display = 'none';
+    });
+});
+
+// Close instruction modals when clicking outside
+instructionsModalOverlay.addEventListener('click', function() {
+    modalInstructionsX.style.display = 'none';
+    modalInstructionsZ.style.display = 'none';
+    instructionsModalOverlay.style.display = 'none';
+});
+
+        
+        // All symbols in one array
+        const allSymbols = [
+            // Numbers
+            { value: "0", display: "0", type: "number" },
+            { value: "1", display: "1", type: "number" },
+            { value: "2", display: "2", type: "number" },
+            { value: "3", display: "3", type: "number" },
+            { value: "4", display: "4", type: "number" },
+            { value: "5", display: "5", type: "number" },
+            { value: "6", display: "6", type: "number" },
+            { value: "7", display: "7", type: "number" },
+            { value: "8", display: "8", type: "number" },
+            { value: "9", display: "9", type: "number" },
+            { value: ".", display: ".", type: "number" },
+            
+            // Basic Operations
+            { value: "+", display: "+", type: "operator" },
+            { value: "-", display: "-", type: "operator" },
+            { value: "\\times", display: "×", type: "operator" },
+            { value: "\\div", display: "÷", type: "operator" },
+            { value: "=", display: "=", type: "operator" },
+            { value: "<", display: "<", type: "operator" },
+            { value: ">", display: ">", type: "operator" },
+            { value: "\\leq", display: "≤", type: "operator" },
+            { value: "\\geq", display: "≥", type: "operator" },
+            { value: "\\neq", display: "≠", type: "operator" },
+            { value: "\\pm", display: "±", type: "operator" },
+            { value: "\\approx", display: "≈", type: "operator" },
+            
+            // Algebra
+            { value: "(", display: "(", type: "symbol" },
+            { value: ")", display: ")", type: "symbol" },
+            { value: "[", display: "[", type: "symbol" },
+            { value: "]", display: "]", type: "symbol" },
+            { value: "\\{", display: "{", type: "symbol" },
+            { value: "\\}", display: "}", type: "symbol" },
+            { value: "\\lvert", display: "|", type: "symbol" },
+            { value: "\\rvert", display: "|", type: "symbol" },
+            
+            // Functions
+            { value: "\\frac{}{}", display: "a/b", type: "function" },
+            { value: "^{}", display: "xⁿ", type: "function" },
+            { value: "_{}", display: "xₙ", type: "function" },
+            { value: "\\sqrt{}", display: "√", type: "function" },
+            { value: "\\sqrt[]{}", display: "ⁿ√", type: "function" },
+            { value: "\\log", display: "log", type: "function" },
+            { value: "\\ln", display: "ln", type: "function" },
+            { value: "\\sin", display: "sin", type: "function" },
+            { value: "\\cos", display: "cos", type: "function" },
+            { value: "\\tan", display: "tan", type: "function" },
+            
+            // Greek Letters
+            { value: "\\alpha", display: "α", type: "greek" },
+            { value: "\\beta", display: "β", type: "greek" },
+            { value: "\\gamma", display: "γ", type: "greek" },
+            { value: "\\delta", display: "δ", type: "greek" },
+            { value: "\\epsilon", display: "ε", type: "greek" },
+            { value: "\\zeta", display: "ζ", type: "greek" },
+            { value: "\\eta", display: "η", type: "greek" },
+            { value: "\\theta", display: "θ", type: "greek" },
+            { value: "\\lambda", display: "λ", type: "greek" },
+            { value: "\\mu", display: "μ", type: "greek" },
+            { value: "\\pi", display: "π", type: "greek" },
+            { value: "\\sigma", display: "σ", type: "greek" },
+            { value: "\\phi", display: "φ", type: "greek" },
+            { value: "\\omega", display: "ω", type: "greek" },
+            
+            // Calculus & Advanced
+            { value: "\\infty", display: "∞", type: "advanced" },
+            { value: "\\sum", display: "∑", type: "advanced" },
+            { value: "\\prod", display: "∏", type: "advanced" },
+            { value: "\\int", display: "∫", type: "advanced" },
+            { value: "\\oint", display: "∮", type: "advanced" },
+            { value: "\\lim", display: "lim", type: "advanced" },
+            { value: "\\partial", display: "∂", type: "advanced" },
+            { value: "\\nabla", display: "∇", type: "advanced" },
+            { value: "\\Delta", display: "Δ", type: "advanced" }
+        ];
+
+        // Comprehensive Formula database with FIXED Unicode display
+        const formulas = {
+            algebra: [
+                { name: "Quadratic Formula", equation: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", description: "Solutions to quadratic equation ax² + bx + c = 0" },
+                { name: "Binomial Theorem", equation: "(a + b)^n = \\sum_{k=0}^{n} \\binom{n}{k} a^{n-k} b^k", description: "Expansion of binomial power" },
+                { name: "Arithmetic Series", equation: "S_n = \\frac{n}{2} (a_1 + a_n)", description: "Sum of arithmetic sequence" },
+                { name: "Geometric Series", equation: "S_n = a \\frac{1 - r^n}{1 - r}", description: "Sum of geometric sequence" },
+                { name: "Logarithm Change", equation: "\\log_a b = \\frac{\\log_c b}{\\log_c a}", description: "Change of base formula" },
+                { name: "Exponential Growth", equation: "A = P e^{rt}", description: "Continuous growth formula" },
+                { name: "Complex Number", equation: "z = a + bi", description: "Standard form of complex number" },
+                { name: "Euler's Formula", equation: "e^{i\\theta} = \\cos \\theta + i \\sin \\theta", description: "Relationship to trigonometry" },
+                { name: "Quadratic Equation", equation: "ax^2 + bx + c = 0", description: "Standard quadratic equation" },
+                { name: "Distance Formula", equation: "d = \\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}", description: "Distance between two points" }
+            ],
+            geometry: [
+                { name: "Pythagorean Theorem", equation: "a^2 + b^2 = c^2", description: "Right triangle sides relationship" },
+                { name: "Circle Area", equation: "A = \\pi r^2", description: "Area of a circle" },
+                { name: "Circle Circumference", equation: "C = 2\\pi r", description: "Circumference of a circle" },
+                { name: "Sphere Volume", equation: "V = \\frac{4}{3} \\pi r^3", description: "Volume of a sphere" },
+                { name: "Cylinder Volume", equation: "V = \\pi r^2 h", description: "Volume of a cylinder" },
+                { name: "Triangle Area", equation: "A = \\frac{1}{2} b h", description: "Area of a triangle" },
+                { name: "Law of Cosines", equation: "c^2 = a^2 + b^2 - 2ab \\cos C", description: "Generalized Pythagorean theorem" },
+                { name: "Law of Sines", equation: "\\frac{a}{\\sin A} = \\frac{b}{\\sin B} = \\frac{c}{\\sin C}", description: "Relationship in any triangle" },
+                { name: "Area of Trapezoid", equation: "A = \\frac{1}{2}(a + b)h", description: "Area of a trapezoid" },
+                { name: "Volume of Cone", equation: "V = \\frac{1}{3}\\pi r^2 h", description: "Volume of a cone" }
+            ],
+            calculus: [
+                { name: "Derivative Definition", equation: "f'(x) = \\lim_{h \\to 0} \\frac{f(x+h)-f(x)}{h}", description: "Limit definition of derivative" },
+                { name: "Power Rule", equation: "\\frac{d}{dx}(x^n) = n x^{n-1}", description: "Derivative of power function" },
+                { name: "Product Rule", equation: "(fg)' = f'g + fg'", description: "Derivative of product" },
+                { name: "Quotient Rule", equation: "\\left(\\frac{f}{g}\\right)' = \\frac{f'g - fg'}{g^2}", description: "Derivative of quotient" },
+                { name: "Chain Rule", equation: "\\frac{d}{dx} f(g(x)) = f'(g(x)) g'(x)", description: "Derivative of composition" },
+                { name: "Fundamental Theorem", equation: "\\int_a^b f(x) dx = F(b) - F(a)", description: "Connection to antiderivatives" },
+                { name: "Integration by Parts", equation: "\\int u dv = uv - \\int v du", description: "Product rule for integrals" },
+                { name: "Taylor Series", equation: "f(x) = \\sum_{n=0}^{\\infty} \\frac{f^{(n)}(a)}{n!} (x-a)^n", description: "Function approximation" },
+                { name: "L'Hôpital's Rule", equation: "\\lim_{x \\to c} \\frac{f(x)}{g(x)} = \\lim_{x \\to c} \\frac{f'(x)}{g'(x)}", description: "Limit of indeterminate forms" },
+                { name: "Mean Value Theorem", equation: "f'(c) = \\frac{f(b)-f(a)}{b-a}", description: "Average rate of change" }
+            ],
+            differential: [
+                { name: "Linear ODE", equation: "\\frac{dy}{dx} + P(x)y = Q(x)", description: "First order linear differential equation" },
+                { name: "Separable ODE", equation: "\\frac{dy}{dx} = f(x)g(y)", description: "Separable differential equation" },
+                { name: "Exact ODE", equation: "M dx + N dy = 0", description: "Exact differential equation" },
+                { name: "Homogeneous ODE", equation: "\\frac{dy}{dx} = f\\left(\\frac{y}{x}\\right)", description: "Homogeneous differential equation" },
+                { name: "Bernoulli ODE", equation: "\\frac{dy}{dx} + P(x)y = Q(x)y^n", description: "Bernoulli differential equation" },
+                { name: "Cauchy-Euler", equation: "x^2 y'' + axy' + by = 0", description: "Cauchy-Euler differential equation" },
+                { name: "Laplace Transform", equation: "F(s) = \\int_0^{\\infty} e^{-st} f(t) dt", description: "Laplace transform definition" },
+                { name: "Wave Equation", equation: "\\frac{\\partial^2 u}{\\partial t^2} = c^2 \\nabla^2 u", description: "Wave equation in physics" },
+                { name: "Heat Equation", equation: "\\frac{\\partial u}{\\partial t} = \\alpha \\nabla^2 u", description: "Heat conduction equation" },
+                { name: "Poisson's Equation", equation: "\\nabla^2 \\phi = f", description: "Poisson's equation" }
+            ],
+            integral: [
+                { name: "Power Rule", equation: "\\int x^n dx = \\frac{x^{n+1}}{n+1} + C", description: "Basic power rule for integration" },
+                { name: "Exponential", equation: "\\int e^x dx = e^x + C", description: "Integral of exponential function" },
+                { name: "Natural Log", equation: "\\int \\frac{1}{x} dx = \\ln|x| + C", description: "Integral of reciprocal function" },
+                { name: "Sine", equation: "\\int \\sin x dx = -\\cos x + C", description: "Integral of sine function" },
+                { name: "Cosine", equation: "\\int \\cos x dx = \\sin x + C", description: "Integral of cosine function" },
+                { name: "By Parts Formula", equation: "\\int u dv = uv - \\int v du", description: "Integration by parts formula" },
+                { name: "Trig Substitution", equation: "\\int \\frac{dx}{\\sqrt{a^2 - x^2}} = \\sin^{-1}\\left(\\frac{x}{a}\\right) + C", description: "Trigonometric substitution" },
+                { name: "Gaussian Integral", equation: "\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}", description: "Gaussian integral result" },
+                { name: "Fourier Transform", equation: "F(\\omega) = \\int_{-\\infty}^{\\infty} f(t) e^{-i\\omega t} dt", description: "Fourier transform definition" },
+                { name: "Beta Function", equation: "B(x,y) = \\int_0^1 t^{x-1}(1-t)^{y-1} dt", description: "Beta function definition" }
+            ],
+            statistics: [
+                { name: "Mean", equation: "\\mu = \\frac{\\sum x_i}{N}", description: "Average value" },
+                { name: "Standard Deviation", equation: "\\sigma = \\sqrt{\\frac{\\sum (x_i-\\mu)^2}{N}}", description: "Measure of dispersion" },
+                { name: "Variance", equation: "\\sigma^2 = \\frac{\\sum (x_i-\\mu)^2}{N}", description: "Square of standard deviation" },
+                { name: "Normal Distribution", equation: "f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}", description: "Probability density function" },
+                { name: "Correlation", equation: "r = \\frac{\\sum (x_i-\\mu_x)(y_i-\\mu_y)}{N \\sigma_x \\sigma_y}", description: "Linear relationship measure" },
+                { name: "Binomial Probability", equation: "P(X=k) = \\binom{n}{k} p^k (1-p)^{n-k}", description: "Probability of k successes" },
+                { name: "Poisson Distribution", equation: "P(X=k) = \\frac{\\lambda^k e^{-\\lambda}}{k!}", description: "Probability of k events" },
+                { name: "Bayes' Theorem", equation: "P(A|B) = \\frac{P(B|A) P(A)}{P(B)}", description: "Conditional probability" },
+                { name: "Chi-squared", equation: "\\chi^2 = \\sum \\frac{(O-E)^2}{E}", description: "Chi-squared test statistic" },
+                { name: "Regression Line", equation: "y = mx + b", description: "Simple linear regression" }
+            ],
+            mechanics: [
+                { name: "Newton's Second Law", equation: "F = ma", description: "Force and acceleration" },
+                { name: "Kinetic Energy", equation: "K = \\frac{1}{2} mv^2", description: "Energy of motion" },
+                { name: "Potential Energy", equation: "U = mgh", description: "Gravitational potential energy" },
+                { name: "Work-Energy Theorem", equation: "W = \\Delta K", description: "Work equals change in kinetic energy" },
+                { name: "Conservation of Energy", equation: "K_1 + U_1 = K_2 + U_2", description: "Total energy conservation" },
+                { name: "Momentum", equation: "p = mv", description: "Linear momentum" },
+                { name: "Impulse", equation: "J = F \\Delta t = \\Delta p", description: "Change in momentum" },
+                { name: "Centripetal Force", equation: "F = \\frac{mv^2}{r}", description: "Force for circular motion" },
+                { name: "Torque", equation: "\\tau = rF\\sin\\theta", description: "Rotational force" },
+                { name: "Angular Momentum", equation: "L = I\\omega", description: "Rotational momentum" }
+            ],
+            electromagnetism: [
+                { name: "Coulomb's Law", equation: "F = k \\frac{q_1 q_2}{r^2}", description: "Electric force between charges" },
+                { name: "Electric Field", equation: "E = \\frac{F}{q}", description: "Field strength definition" },
+                { name: "Ohm's Law", equation: "V = IR", description: "Voltage, current, resistance" },
+                { name: "Electric Power", equation: "P = IV", description: "Power in electrical circuits" },
+                { name: "Magnetic Force", equation: "F = qvB \\sin \\theta", description: "Force on moving charge" },
+                { name: "Faraday's Law", equation: "\\varepsilon = -\\frac{d\\Phi_B}{dt}", description: "Induced electromotive force" },
+                { name: "Maxwell's Equations", equation: "\\nabla \\cdot E = \\frac{\\rho}{\\varepsilon_0}", description: "Gauss's law for electricity" },
+                { name: "Lorentz Force", equation: "F = q(E + v \\times B)", description: "Total electromagnetic force" },
+                { name: "Biot-Savart Law", equation: "dB = \\frac{\\mu_0}{4\\pi} \\frac{Idl \\times r}{r^3}", description: "Magnetic field from current" },
+                { name: "Ampère's Law", equation: "\\oint B \\cdot dl = \\mu_0 I", description: "Magnetic field around current" }
+            ],
+            thermodynamics: [
+                { name: "First Law", equation: "\\Delta U = Q - W", description: "Conservation of energy" },
+                { name: "Ideal Gas Law", equation: "PV = nRT", description: "State equation for ideal gases" },
+                { name: "Entropy Change", equation: "\\Delta S = \\int \\frac{dQ_{rev}}{T}", description: "Definition of entropy" },
+                { name: "Carnot Efficiency", equation: "\\eta = 1 - \\frac{T_c}{T_h}", description: "Maximum possible efficiency" },
+                { name: "Heat Transfer", equation: "Q = mc\\Delta T", description: "Sensible heat calculation" },
+                { name: "Stefan-Boltzmann Law", equation: "P = \\sigma A T^4", description: "Radiated power" },
+                { name: "Boltzmann Distribution", equation: "P(E) \\propto e^{-E/kT}", description: "Probability of energy state" },
+                { name: "Gibbs Free Energy", equation: "G = H - TS", description: "Spontaneity criterion" },
+                { name: "Van der Waals Equation", equation: "(P + \\frac{a}{V^2})(V - b) = RT", description: "Real gas equation" },
+                { name: "Clausius-Clapeyron", equation: "\\ln\\left(\\frac{P_2}{P_1}\\right) = \\frac{\\Delta H_{vap}}{R}\\left(\\frac{1}{T_1} - \\frac{1}{T_2}\\right)", description: "Vapor pressure relationship" }
+            ],
+            quantum: [
+                { name: "Planck's Relation", equation: "E = hf", description: "Photon energy" },
+                { name: "de Broglie Wavelength", equation: "\\lambda = \\frac{h}{p}", description: "Wave-particle duality" },
+                { name: "Schrödinger Equation", equation: "i\\hbar \\frac{\\partial \\psi}{\\partial t} = \\hat{H} \\psi", description: "Quantum state evolution" },
+                { name: "Heisenberg Uncertainty", equation: "\\Delta x \\Delta p \\geq \\frac{\\hbar}{2}", description: "Position-momentum uncertainty" },
+                { name: "Pauli Exclusion", equation: "\\text{No two identical fermions}", description: "Quantum statistics rule" },
+                { name: "Quantum Harmonic Oscillator", equation: "E_n = \\hbar\\omega(n + \\frac{1}{2})", description: "Energy levels" },
+                { name: "Hydrogen Atom Energy", equation: "E_n = -\\frac{13.6}{n^2} \\text{eV}", description: "Bohr model energy levels" },
+                { name: "Spin", equation: "S = \\pm \\frac{1}{2} \\hbar", description: "Intrinsic angular momentum" },
+                { name: "Compton Scattering", equation: "\\Delta \\lambda = \\frac{h}{m_e c}(1 - \\cos\\theta)", description: "Photon wavelength shift" },
+                { name: "Blackbody Radiation", equation: "B(\\lambda, T) = \\frac{2hc^2}{\\lambda^5} \\frac{1}{e^{hc/\\lambda kT} - 1}", description: "Planck's law" }
+            ],
+            matrices: [
+                { name: "Matrix Definition", equation: "A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}", description: "2x2 matrix" },
+                { name: "Matrix Multiplication", equation: "C = AB", description: "Product of matrices" },
+                { name: "Determinant 2x2", equation: "\\det(A) = ad - bc", description: "Determinant of 2x2 matrix" },
+                { name: "Inverse 2x2", equation: "A^{-1} = \\frac{1}{\\det(A)} \\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}", description: "Inverse of 2x2 matrix" },
+                { name: "Identity Matrix", equation: "I = \\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}", description: "2x2 identity matrix" },
+                { name: "Matrix Transpose", equation: "A^T", description: "Transpose of matrix" },
+                { name: "Eigenvalues", equation: "\\det(A - \\lambda I) = 0", description: "Characteristic equation" },
+                { name: "Trace", equation: "\\text{tr}(A) = a + d", description: "Sum of diagonal elements" },
+                { name: "Rank", equation: "\\text{rank}(A)", description: "Dimension of column space" },
+                { name: "Matrix Exponential", equation: "e^A = \\sum_{k=0}^{\\infty} \\frac{A^k}{k!}", description: "Matrix exponential function" }
+            ],
+            chemistry: [
+                { name: "Ideal Gas Law", equation: "PV = nRT", description: "Relationship between pressure, volume, and temperature" },
+                { name: "Arrhenius Equation", equation: "k = A e^{-E_a / RT}", description: "Temperature dependence of reaction rates" },
+                { name: "Nernst Equation", equation: "E = E^0 - \\frac{RT}{nF} \\ln Q", description: "Cell potential at non-standard conditions" },
+                { name: "Henderson-Hasselbalch", equation: "pH = pK_a + \\log\\left(\\frac{[A^-]}{[HA]}\\right)", description: "pH of buffer solutions" },
+                { name: "Beer-Lambert Law", equation: "A = \\varepsilon l c", description: "Absorbance in spectroscopy" },
+                { name: "Rate Law", equation: "\\text{rate} = k[A]^m[B]^n", description: "Reaction rate equation" },
+                { name: "Gibbs Free Energy", equation: "\\Delta G = \\Delta H - T\\Delta S", description: "Spontaneity of reactions" },
+                { name: "Van't Hoff Equation", equation: "\\ln K = -\\frac{\\Delta H^\\circ}{RT} + \\frac{\\Delta S^\\circ}{R}", description: "Temperature dependence of equilibrium" },
+                { name: "Clausius-Clapeyron", equation: "\\ln\\left(\\frac{P_2}{P_1}\\right) = \\frac{\\Delta H_{vap}}{R}\\left(\\frac{1}{T_1} - \\frac{1}{T_2}\\right)", description: "Vapor pressure relationship" },
+                { name: "Raoult's Law", equation: "P_A = X_A P_A^0", description: "Vapor pressure of solutions" }
+            ],
+            biology: [
+                { name: "Hardy-Weinberg", equation: "p^2 + 2pq + q^2 = 1", description: "Genetic equilibrium in populations" },
+                { name: "Exponential Growth", equation: "N_t = N_0 e^{rt}", description: "Population growth without limits" },
+                { name: "Logistic Growth", equation: "\\frac{dN}{dt} = rN\\left(1 - \\frac{N}{K}\\right)", description: "Population growth with carrying capacity" },
+                { name: "Michaelis-Menten", equation: "v = \\frac{V_{max}[S]}{K_m + [S]}", description: "Enzyme kinetics" },
+                { name: "Lineweaver-Burk", equation: "\\frac{1}{v} = \\frac{K_m}{V_{max}}\\frac{1}{[S]} + \\frac{1}{V_{max}}", description: "Linear form of Michaelis-Menten" },
+                { name: "Henderson-Hasselbalch", equation: "pH = pK_a + \\log\\left(\\frac{[A^-]}{[HA]}\\right)", description: "pH of biological buffers" },
+                { name: "Nernst Equation", equation: "E = E^0 - \\frac{RT}{nF} \\ln Q", description: "Membrane potential" },
+                { name: "Fick's Law", equation: "J = -D \\frac{dC}{dx}", description: "Diffusion rate" },
+                { name: "Arrhenius Equation", equation: "k = A e^{-E_a / RT}", description: "Temperature dependence of biological rates" },
+                { name: "Allometric Scaling", equation: "Y = Y_0 M^b", description: "Biological scaling relationships" }
+            ],
+            economics: [
+                { name: "GDP", equation: "Y = C + I + G + (X - M)", description: "Gross Domestic Product components" },
+                { name: "Quantity Theory", equation: "MV = PY", description: "Relationship between money supply and price level" },
+                { name: "Cobb-Douglas", equation: "Y = A L^\\alpha K^\\beta", description: "Production function" },
+                { name: "Phillips Curve", equation: "\\pi = \\pi_e - \\beta(U - U_n)", description: "Inflation-unemployment tradeoff" },
+                { name: "Okun's Law", equation: "\\frac{Y - Y_p}{Y_p} = -c(U - U_n)", description: "GDP gap and unemployment" },
+                { name: "Fisher Equation", equation: "i = r + \\pi^e", description: "Nominal and real interest rates" },
+                { name: "Solow Growth Model", equation: "\\frac{\\dot{k}}{k} = s f(k) - (n + g + \\delta)", description: "Capital accumulation" },
+                { name: "Black-Scholes", equation: "C = S N(d_1) - K e^{-rT} N(d_2)", description: "Option pricing model" },
+                { name: "Utility Function", equation: "U(x_1, x_2) = x_1^\\alpha x_2^\\beta", description: "Cobb-Douglas utility" },
+                { name: "IS Curve", equation: "Y = C(Y - T) + I(r) + G", description: "Goods market equilibrium" }
+            ],
+            finance: [
+                { name: "Compound Interest", equation: "A = P \\left(1 + \\frac{r}{n}\\right)^{nt}", description: "Future value with compound interest" },
+                { name: "Present Value", equation: "PV = \\frac{FV}{(1 + r)^n}", description: "Current worth of future amount" },
+                { name: "Annuity Payment", equation: "PMT = PV \\cdot \\frac{r(1+r)^n}{(1+r)^n - 1}", description: "Loan payment calculation" },
+                { name: "Black-Scholes", equation: "C = S N(d_1) - K e^{-rT} N(d_2)", description: "Option pricing model" },
+                { name: "Capital Asset Pricing", equation: "E(R_i) = R_f + \\beta_i (E(R_m) - R_f)", description: "Expected return on asset" },
+                { name: "Gordon Growth", equation: "P = \\frac{D_1}{r - g}", description: "Stock valuation with constant growth" },
+                { name: "Portfolio Variance", equation: "\\sigma_p^2 = w_1^2\\sigma_1^2 + w_2^2\\sigma_2^2 + 2w_1w_2\\sigma_1\\sigma_2\\rho_{12}", description: "Risk of two-asset portfolio" },
+                { name: "Sharpe Ratio", equation: "S = \\frac{R_p - R_f}{\\sigma_p}", description: "Risk-adjusted return" },
+                { name: "Value at Risk", equation: "VaR = \\mu - z \\sigma", description: "Maximum expected loss" },
+                { name: "Duration", equation: "D = \\frac{\\sum t \\cdot CF_t / (1+y)^t}{\\sum CF_t / (1+y)^t}", description: "Bond price sensitivity" }
+            ],
+            logic: [
+                { name: "Modus Ponens", equation: "(P \\to Q) \\land P \\to Q", description: "If P implies Q and P is true, then Q is true" },
+                { name: "Modus Tollens", equation: "(P \\to Q) \\land \\neg Q \\to \\neg P", description: "If P implies Q and Q is false, then P is false" },
+                { name: "De Morgan's Laws", equation: "\\neg(P \\land Q) \\equiv \\neg P \\lor \\neg Q", description: "Negation of conjunction" },
+                { name: "De Morgan's Laws", equation: "\\neg(P \\lor Q) \\equiv \\neg P \\land \\neg Q", description: "Negation of disjunction" },
+                { name: "Distributive Laws", equation: "P \\land (Q \\lor R) \\equiv (P \\land Q) \\lor (P \\land R)", description: "Conjunction over disjunction" },
+                { name: "Distributive Laws", equation: "P \\lor (Q \\land R) \\equiv (P \\lor Q) \\land (P \\lor R)", description: "Disjunction over conjunction" },
+                { name: "Implication", equation: "P \\to Q \\equiv \\neg P \\lor Q", description: "Material implication" },
+                { name: "Contrapositive", equation: "P \\to Q \\equiv \\neg Q \\to \\neg P", description: "Logical equivalence" },
+                { name: "Double Negation", equation: "P \\equiv \\neg(\\neg P)", description: "Cancellation of double negation" },
+                { name: "Quantifier Negation", equation: "\\neg(\\forall x P(x)) \\equiv \\exists x \\neg P(x)", description: "Negation of universal quantifier" }
+            ]
+        };
+
+        // Enhanced LaTeX to Unicode mapping
+        const latexToUnicode = {
+            // Greek letters
+            '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ',
+            '\\epsilon': 'ε', '\\zeta': 'ζ', '\\eta': 'η', '\\theta': 'θ',
+            '\\lambda': 'λ', '\\mu': 'μ', '\\pi': 'π', '\\sigma': 'σ',
+            '\\phi': 'φ', '\\omega': 'ω',
+            
+            // Operators
+            '\\times': '×', '\\div': '÷', '\\pm': '±', '\\mp': '∓',
+            '\\leq': '≤', '\\geq': '≥', '\\neq': '≠', '\\approx': '≈',
+            '\\infty': '∞', '\\partial': '∂', '\\nabla': '∇', '\\Delta': 'Δ',
+            
+            // Calculus
+            '\\sum': '∑', '\\prod': '∏', '\\int': '∫', '\\oint': '∮',
+            '\\lim': 'lim',
+            
+            // Other symbols
+            '\\cdot': '·', '\\circ': '∘', '\\bullet': '•', '\\ast': '∗',
+            '\\sqrt': '√', '\\angle': '∠', '\\triangle': '△', '\\parallel': '∥',
+            '\\perp': '⊥', '\\ldots': '…', '\\cdots': '⋯', '\\vdots': '⋮',
+            '\\ddots': '⋱', '\\hbar': 'ℏ'
+        };
+
+        // Superscript mapping
+        const superscriptMap = {
+            '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', 
+            '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+            '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
+            'n': 'ⁿ', 'i': 'ⁱ', 'j': 'ʲ', 'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ',
+            'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ', 'v': 'ᵛ', 'w': 'ʷ',
+            'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ', 'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ',
+            'd': 'ᵈ', 'e': 'ᵉ', 'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'o': 'ᵒ',
+            'p': 'ᵖ'
+        };
+
+        // Subscript mapping
+        const subscriptMap = {
+            '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+            '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+            '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
+            'n': 'ₙ', 'i': 'ᵢ', 'j': 'ⱼ', 'k': 'ₖ', 'l': 'ₗ', 'm': 'ₘ',
+            'r': 'ᵣ', 's': 'ₛ', 't': 'ₜ', 'u': 'ᵤ', 'v': 'ᵥ', 'w': 'w',
+            'x': 'ₓ', 'y': 'y', 'z': 'z', 'a': 'ₐ', 'e': 'ₑ', 'h': 'ₕ',
+            'o': 'ₒ', 'p': 'ₚ'
+        };
+
+        // Initialize
+        loadSymbols();
+        loadFormulas('algebra');
+        
+        // Update preview when equation changes
+        equationInput.addEventListener('input', updatePreview);
+        
+        // Category tab switching
+        categoryTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                
+                // Update active tab
+                categoryTabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Load formulas for this category
+                loadFormulas(category);
+            });
+        });
+        
+        // Clear button
+        clearBtn.addEventListener('click', function() {
+            equationInput.value = '';
+            updatePreview();
+            resultValue.textContent = 'No evaluation yet';
+            showNotification('Equation cleared');
+        });
+        
+        // Copy LaTeX button
+        copyBtn.addEventListener('click', function() {
+            equationInput.select();
+            document.execCommand('copy');
+            showNotification('LaTeX code copied to clipboard');
+        });
+        
+        // Copy preview button - Copies as formatted Unicode text
+        copyPreviewBtn.addEventListener('click', copyPreviewAsUnicode);
+        
+        // Evaluate button
+        evaluateBtn.addEventListener('click', function() {
+            evaluateExpression();
+        });
+        
+        // Modal functionality
+        openModalBtn.addEventListener('click', function() {
+            modalOverlay.style.display = 'flex';
+            equationEditor.style.display = 'block';
+        });
+        
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                modalOverlay.style.display = 'none';
+                equationEditor.style.display = 'none';
+            }
+        });
+        
+        // Instruction modals functionality
+        modalInstructionsXBtn.addEventListener('click', function() {
+            modalInstructionsX.style.display = 'block';
+        });
+        
+        modalInstructionsZBtn.addEventListener('click', function() {
+            modalInstructionsZ.style.display = 'block';
+        });
+        
+        // Close instruction modals
+        modalCloseBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                modalInstructionsX.style.display = 'none';
+                modalInstructionsZ.style.display = 'none';
+            });
+        });
+        
+        // Close instruction modals when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target === modalInstructionsX) {
+                modalInstructionsX.style.display = 'none';
+            }
+            if (e.target === modalInstructionsZ) {
+                modalInstructionsZ.style.display = 'none';
+            }
+        });
+        
+        // Function to copy preview as formatted Unicode text
+        function copyPreviewAsUnicode() {
+            const equation = equationInput.value.trim();
+            
+            if (!equation) {
+                showNotification('No equation to copy', true);
+                return;
+            }
+
+            // Convert LaTeX to formatted Unicode text
+            const formattedText = convertLatexToUnicode(equation);
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(formattedText)
+                .then(() => {
+                    showNotification('Equation copied as formatted text');
+                })
+                .catch(err => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = formattedText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showNotification('Equation copied as formatted text');
+                });
+        }
+
+        // Function to convert LaTeX to Unicode text
+        function convertLatexToUnicode(latex) {
+            let text = latex;
+            
+            // Handle binomial coefficients first
+            text = text.replace(/\\binom{([^}]+)}{([^}]+)}/g, 'C($1,$2)');
+            
+            // Handle fractions
+            text = convertFractions(text);
+            
+            // Handle square roots
+            text = convertSquareRoots(text);
+            
+            // Handle superscripts with braces
+            text = convertBracedSuperscripts(text);
+            
+            // Handle subscripts with braces
+            text = convertBracedSubscripts(text);
+            
+            // Handle simple superscripts (without braces)
+            text = convertSimpleSuperscripts(text);
+            
+            // Handle simple subscripts (without braces)
+            text = convertSimpleSubscripts(text);
+            
+            // Replace common LaTeX commands with Unicode equivalents
+            Object.keys(latexToUnicode).forEach(cmd => {
+                const regex = new RegExp(cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                text = text.replace(regex, latexToUnicode[cmd]);
+            });
+            
+            // Handle integrals with limits
+            text = text.replace(/\\int_{([^}]+)}^{([^}]+)}/g, '∫$1$2');
+            
+            // Handle summations with limits - FIXED to use proper subscript notation
+            text = text.replace(/\\sum_{([^}]+)}^{([^}]+)}/g, function(match, lower, upper) {
+                const subscript = convertToSubscript(lower.replace(/=/g, '='));
+                const superscript = convertToSuperscript(upper);
+                return `∑${subscript}${superscript}`;
+            });
+            
+            // Handle simple summations
+            text = text.replace(/\\sum_{([^}]+)}/g, function(match, content) {
+                return `∑${convertToSubscript(content)}`;
+            });
+            
+            // Handle limits
+            text = text.replace(/\\lim_{([^}]+)}/g, 'lim $1');
+            text = text.replace(/\\to/g, '→');
+            
+            // Remove remaining braces
+            text = text.replace(/[{}]/g, '');
+            
+            // Clean up extra spaces
+            text = text.replace(/\s+/g, ' ').trim();
+            
+            return text;
+        }
+
+        // Convert fractions
+        function convertFractions(text) {
+            return text.replace(/\\frac{([^}]+)}{([^}]+)}/g, function(match, num, den) {
+                const numerator = convertSimpleSuperscripts(convertSimpleSubscripts(num));
+                const denominator = convertSimpleSuperscripts(convertSimpleSubscripts(den));
+                return `(${numerator})/(${denominator})`;
+            });
+        }
+
+        // Convert square roots
+        function convertSquareRoots(text) {
+            // Handle nth roots first: \sqrt[n]{x}
+            text = text.replace(/\\sqrt\[([^\]]+)\]{(.+)}/g, function(match, n, expr) {
+                const root = convertToSuperscript(n);
+                const expression = convertSimpleSuperscripts(convertSimpleSubscripts(expr));
+                return `${root}√(${expression})`;
+            });
+            
+            // Handle simple square roots: \sqrt{x}
+            text = text.replace(/\\sqrt{(.+)}/g, function(match, expr) {
+                const expression = convertSimpleSuperscripts(convertSimpleSubscripts(expr));
+                return `√(${expression})`;
+            });
+            
+            return text;
+        }
+
+        // Convert braced superscripts
+        function convertBracedSuperscripts(text) {
+            return text.replace(/\^{([^}]+)}/g, function(match, content) {
+                return convertToSuperscript(content);
+            });
+        }
+
+        // Convert braced subscripts
+        function convertBracedSubscripts(text) {
+            return text.replace(/_{([^}]+)}/g, function(match, content) {
+                return convertToSubscript(content);
+            });
+        }
+
+        // Convert simple superscripts (without braces)
+        function convertSimpleSuperscripts(text) {
+            return text.replace(/([a-zA-Z0-9])\^([a-zA-Z0-9+-=()])/g, function(match, base, exp) {
+                return base + (superscriptMap[exp] || exp);
+            });
+        }
+
+        // Convert simple subscripts (without braces)
+        function convertSimpleSubscripts(text) {
+            return text.replace(/([a-zA-Z0-9])_([a-zA-Z0-9+-=()])/g, function(match, base, sub) {
+                return base + (subscriptMap[sub] || sub);
+            });
+        }
+
+        // Convert content to superscript
+        function convertToSuperscript(content) {
+            return content.split('').map(char => superscriptMap[char] || char).join('');
+        }
+
+        // Convert content to subscript
+        function convertToSubscript(content) {
+            return content.split('').map(char => subscriptMap[char] || char).join('');
+        }
+        
+        // Function to load all symbols
+        function loadSymbols() {
+            symbolsGrid.innerHTML = '';
+            
+            allSymbols.forEach(symbol => {
+                const button = document.createElement('button');
+                button.className = `math-button ${symbol.type}`;
+                button.setAttribute('data-value', symbol.value);
+                button.textContent = symbol.display;
+                
+                button.addEventListener('click', function() {
+                    insertAtCursor(equationInput, symbol.value);
+                    updatePreview();
+                });
+                
+                symbolsGrid.appendChild(button);
+            });
+        }
+        
+        // Function to load formulas for a category
+        function loadFormulas(category) {
+            formulaContainer.innerHTML = '';
+            
+            if (formulas[category]) {
+                formulas[category].forEach(formula => {
+                    const formulaElement = document.createElement('div');
+                    formulaElement.className = 'formula-item';
+                    formulaElement.innerHTML = `
+                        <div class="formula-name">${formula.name}</div>
+                        <div class="formula-equation">${formula.equation}</div>
+                        <div class="formula-description">${formula.description}</div>
+                    `;
+                    
+                    formulaElement.addEventListener('click', function() {
+                        equationInput.value = formula.equation;
+                        updatePreview();
+                        showNotification(`Inserted: ${formula.name}`);
+                    });
+                    
+                    formulaContainer.appendChild(formulaElement);
+                });
+            }
+        }
+        
+        // Function to insert text at cursor position
+        function insertAtCursor(textarea, text) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end, textarea.value.length);
+            
+            textarea.value = before + text + after;
+            textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            textarea.focus();
+        }
+        
+        // Function to update the preview
+        function updatePreview() {
+            const equation = equationInput.value.trim();
+            
+            if (equation === '') {
+                preview.innerHTML = '<p>Your equation will appear here</p><button class="copy-preview-btn" id="copy-preview-btn">🗐 Copy</button>';
+                // Re-attach event listener
+                document.getElementById('copy-preview-btn').addEventListener('click', copyPreviewAsUnicode);
+                return;
+            }
+            
+            // Use MathJax to render the equation
+            preview.innerHTML = `\\(${equation}\\)<button class="copy-preview-btn" id="copy-preview-btn">🗐 Copy</button>`;
+            
+            // Re-render MathJax
+            if (window.MathJax) {
+                MathJax.typesetPromise([preview]).then(() => {
+                    // Re-attach event listener after MathJax renders
+                    document.getElementById('copy-preview-btn').addEventListener('click', copyPreviewAsUnicode);
+                }).catch(function(err) {
+                    preview.innerHTML = `<p style="color: red;">Error: ${err.message}</p><button class="copy-preview-btn" id="copy-preview-btn">🗐 Copy</button>`;
+                    document.getElementById('copy-preview-btn').addEventListener('click', copyPreviewAsUnicode);
+                });
+            }
+        }
+        
+        // Function to evaluate simple expressions
+        function evaluateExpression() {
+            const equation = equationInput.value.trim();
+            
+            if (!equation) {
+                showNotification('No equation to evaluate', true);
+                return;
+            }
+            
+            try {
+                let evalEquation = equation
+                    .replace(/\\times/g, '*')
+                    .replace(/\\div/g, '/')
+                    .replace(/\^/g, '**')
+                    .replace(/\\sqrt/g, 'Math.sqrt')
+                    .replace(/\\pi/g, 'Math.PI')
+                    .replace(/e/g, 'Math.E')
+                    .replace(/\\sin/g, 'Math.sin')
+                    .replace(/\\cos/g, 'Math.cos')
+                    .replace(/\\tan/g, 'Math.tan')
+                    .replace(/\\log/g, 'Math.log10')
+                    .replace(/\\ln/g, 'Math.log');
+                
+                // Remove non-mathematical characters for safety
+                evalEquation = evalEquation.replace(/[^0-9+\-*/().\s]/g, '');
+                
+                const result = eval(evalEquation);
+                resultValue.textContent = result;
+                showNotification(`Result: ${result}`);
+            } catch (error) {
+                resultValue.textContent = 'Error in evaluation';
+                showNotification('Cannot evaluate this expression', true);
+            }
+        }
+        
+        // Function to show notification
+        function showNotification(message, isError = false) {
+            notification.textContent = message;
+            notification.style.backgroundColor = isError ? 'var(--danger)' : 'var(--success)';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Initial preview
+        updatePreview();
+
+        // Close modal
+        const closeModalBtn = document.getElementById('close-modal');
+        closeModalBtn.addEventListener('click', function() {
+            modalOverlay.style.display = 'none';
+            equationEditor.style.display = 'none';
+        });
+
+        // Right-click to copy option
+        preview.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            const selection = window.getSelection().toString().trim();
+            const textToCopy = selection || preview.innerText.trim();
+            if (textToCopy) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showNotification('Equation copied');
+                });
+            }
+        });
+
+        // Toggle symbols section
+        document.getElementById('symbols-title').addEventListener('click', function() {
+            const symbolsContainer = document.getElementById('symbols-grid');
+            symbolsContainer.classList.toggle('collapsed');
+            this.classList.toggle('collapsed');
+        });
+
+    });
+</script>
+</body>
+</html>
